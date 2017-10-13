@@ -28,9 +28,29 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 ## Load data
 
 ```{r load_ind_data}
-ind <- read.csv()
+### Load the individual level data
 
+ind <- read.csv("Data/SimpleWorld/ind-full.csv") # load the individual level data
+
+class(ind) # verify the data type
+ind
 ```
+
+We can see from the output above that this has loaded a data frame object with `r nrow(ind)` rows and `r ncol(ind)` columns.
+
+```{r load_constraint_data}
+### Load the constraint data (usually one variable at a time - individual files)
+
+con_age <- read.csv("Data/SimpleWorld/age.csv")
+con_sex <- read.csv("Data/SimpleWorld/sex.csv")
+
+class(con_age)
+class(con_sex)
+
+con_age
+con_sex
+```
+
 
 ## Including Plots
 
