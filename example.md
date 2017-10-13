@@ -1,17 +1,8 @@
----
-title: "Spatial Microsim example"
-author: "Thomas W Rushby"
-date: "13/10/2017"
-output:
-  html_document:
-    fig_caption: yes
-    keep_md: yes
-    number_sections: yes
----
+# Spatial Microsim example
+Thomas W Rushby  
+13/10/2017  
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
 
 # About
 
@@ -31,28 +22,76 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 ## Load data
 
-```{r load_ind_data}
+
+```r
 ### Load the individual level data
 
 ind <- read.csv("Data/SimpleWorld/ind-full.csv") # load the individual level data
 
 class(ind) # verify the data type
+```
+
+```
+## [1] "data.frame"
+```
+
+```r
 ind
 ```
 
-We can see from the output above that this has loaded a data frame object with `r nrow(ind)` rows and `r ncol(ind)` columns.
+```
+##   id age sex income
+## 1  1  59   m   2868
+## 2  2  54   m   2474
+## 3  3  35   m   2231
+## 4  4  73   f   3152
+## 5  5  49   f   2473
+```
 
-```{r load_constraint_data}
+We can see from the output above that this has loaded a data frame object with 5 rows and 4 columns.
+
+
+```r
 ### Load the constraint data (usually one variable at a time - individual files)
 
 con_age <- read.csv("Data/SimpleWorld/age.csv")
 con_sex <- read.csv("Data/SimpleWorld/sex.csv")
 
 class(con_age)
-class(con_sex)
+```
 
+```
+## [1] "data.frame"
+```
+
+```r
+class(con_sex)
+```
+
+```
+## [1] "data.frame"
+```
+
+```r
 con_age
+```
+
+```
+##   a0.49 a.50.
+## 1     8     4
+## 2     2     8
+## 3     7     4
+```
+
+```r
 con_sex
+```
+
+```
+##   m f
+## 1 6 6
+## 2 4 6
+## 3 3 8
 ```
 
 ### Tests for constraint variables
@@ -72,10 +111,21 @@ Indicates the same population base
 3. Row totals
 Indicating that the zones are listed in the same order (check on zone_ids) and the same population base
 
-```{r constraint_tests}
-sum(con_age) == sum(con_sex) # check population totals
 
+```r
+sum(con_age) == sum(con_sex) # check population totals
+```
+
+```
+## [1] TRUE
+```
+
+```r
 rowSums(con_age) == rowSums(con_sex) # check row totals
+```
+
+```
+## [1] TRUE TRUE TRUE
 ```
 
 ### Subset and filter
@@ -84,35 +134,28 @@ Good practice to filter out all unwanted data early on (i.e. remove superfluous 
 
 In the ind dataset, only age and sex variables are useful so we remove income:
 
-```{r subset_and_filter, include=TRUE}
 
+```r
 ind_orig <- ind # keep original dataset
 ind <- ind[, -4] # removes income (column 4)
 ind
 ```
 
-### Recategorise individual level variables
-
-Ensure each dataset contains the same information.
-
-In this example we need to categorise age in the ind dataset to match the constraint data (con_age).
-
-```{r recategorise_ind_variables}
-
-# categorise (bin) the age variable
-brks <- c(0,49,120) # set break points
-labs <- c("a0_49", "a50+") # create labels
-ind$age <- cut(ind$age, breaks = brks, labels = labs) # overwrite the age variable with categorical age bands
-ind
 ```
-UP TO 4.6 ON PAGE 37
+##   id age sex
+## 1  1  59   m
+## 2  2  54   m
+## 3  3  35   m
+## 4  4  73   f
+## 5  5  49   f
+```
+
+
 
 # Plots
 
 You can also embed plots, for example:
 
-```{r plots, echo=FALSE}
 
-```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
