@@ -55,7 +55,7 @@ con_age
 con_sex
 ```
 
-## Notes on constraint variables
+### Tests for constraint variables
 
 Beware of constraint variables that come from different sources (Lovelace):
 * check coherence of data
@@ -63,7 +63,7 @@ Beware of constraint variables that come from different sources (Lovelace):
 * can happen if constraint variables are measured using different base populations or at different levels (i.e indivdual and household)
 This can cause the procedure to fail.
 
-## Tests for constraint variables
+So, test constraints . . .
 
 1. Zone ordering
 Check that zones are loaded in the same order - and with some kind of zone_id that identifies each zone (consistent across datasets/constraint variables)
@@ -78,9 +78,19 @@ sum(con_age) == sum(con_sex) # check population totals
 rowSums(con_age) == rowSums(con_sex) # check row totals
 ```
 
+### Subset and filter
+
+Good practice to filter out all unwanted data early on (i.e. remove superfluous variables). This will speed-up simulation and avoid over-complication.
+
+Not required in this example.
+
+```{r subset_and_filter, include=FALSE}
+
+```
 
 
-## Including Plots
+
+# Plots
 
 You can also embed plots, for example:
 
