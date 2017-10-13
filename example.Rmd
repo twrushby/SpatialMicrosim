@@ -51,6 +51,13 @@ con_age
 con_sex
 ```
 
+## Notes on constraint variables:
+
+Beware of constraint variables that come from different sources (Lovelace):
+* check coherence of data
+* in some cases the total number of individuals will be inconsistent
+* can happen if constraint variables are measured using different base populations or at different levels (i.e indivdual and household)
+This can cause the procedure to fail.
 
 ## Including Plots
 
