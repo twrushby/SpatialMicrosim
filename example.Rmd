@@ -1,0 +1,43 @@
+---
+title: "Spatial Microsim example"
+author: "Thomas W Rushby"
+date: "13/10/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About
+
+This document was created to record the code and output of the example spatial microsimulation in Robin Lovelace's book Spatial microsimulation with R <http://robinlovelace.net/spatial-microsim-book/>.
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+# Introduction
+
+## Why use spatial microsim?
+
+"Spatial Microsimulation is useful when you have an intermediary amount of data available: geographically aggregated count and a non-spatial survey." Lovelace - Spatial microsimulaton with R
+
+\newpage
+
+# Microsim example
+
+## Load data
+
+```{r load_ind_data}
+ind <- read.csv()
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
