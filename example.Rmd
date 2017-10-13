@@ -51,7 +51,7 @@ con_age
 con_sex
 ```
 
-## Notes on constraint variables:
+## Notes on constraint variables
 
 Beware of constraint variables that come from different sources (Lovelace):
 * check coherence of data
@@ -59,12 +59,29 @@ Beware of constraint variables that come from different sources (Lovelace):
 * can happen if constraint variables are measured using different base populations or at different levels (i.e indivdual and household)
 This can cause the procedure to fail.
 
+## Tests for constraint variables
+
+1. Zone ordering
+Check that zones are loaded in the same order - and with some kind of zone_id that identifies each zone (consistent across datasets/constraint variables)
+2. Total population
+Indicates the same population base
+3. Row totals
+Indicating that the zones are listed in the same order (check on zone_ids) and the same population base
+
+```{r constraint_tests}
+sum(con_age) == sum(con_sex) # check population totals
+
+rowSums(con_age) == rowSums(con_sex) # check row totals
+```
+
+
+
 ## Including Plots
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r plots, echo=FALSE}
+
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
