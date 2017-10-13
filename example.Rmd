@@ -2,7 +2,8 @@
 title: "Spatial Microsim example"
 author: "Thomas W Rushby"
 date: "13/10/2017"
-output: html_document
+output:
+  html_document:
     fig_caption: yes
     keep_md: yes
     number_sections: yes
