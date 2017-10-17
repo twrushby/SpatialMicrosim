@@ -6,7 +6,7 @@ Thomas W Rushby
 
 # About
 
-This document was created to record the code and output of the example spatial microsimulation in Robin Lovelace's book Spatial microsimulation with R <http://robinlovelace.net/spatial-microsim-book/>.
+This document was created to record the code and output of the example spatial microsimulation in Robin Lovelace's book Spatial microsimulation with R <http://robinlovelace.net/spatial-microsim-book/>. The text quotes heavily from the book and care should be taken when using any of the text to correctly cite the source.
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
@@ -274,7 +274,52 @@ Now that we have the data loaded and prepared this part is concerned with runnin
 
 We have 3 rows and 5 individuals in the SimpleWorld data, therefore 15 weights will be estmiated in this example.
 
-### Create a matrix to hold weights
+**note: creating matrix to hold weights appears here in book (printed pdf) but logically comes later - see weighting algorithms\ipf below**
+
+## Weighting algorithms
+
+There are *deterministic* and *stochastic* methods for weighting in spatial microsimulation. IPF is *deterministic* and therefore the results never vary: the weights will be the same every time. In contrast, *stochastic* methods use random numbers.
+
+The distinction between *deterministic* and *stochastic* approaches points to a wider divide in methods: *reweighting* and *combinatorial optimisation*.
+
+> The conecpt of weights is critical to understanding how population synthesis generates spatial microdata.
+
+### Random allocation
+
+If we have no information on the characteristics of the inhabitants, only total population of each zone then we can only assume that the distribution of characteristics found in the sample is representative of the distribution of the whole population. In this scenario, individuals are chosen at random from the sample and allocated to zones at random. Here, the distribution of characteristics of individuals in each zone will tend towards the microdata (see Lovelace, p.41).
+
+In SimpleWorld this can be achieved by randomly allocating the 5 individuals of the microdata to zone 1 (with population of 12) using the `sample()` command:
+
+
+```r
+set.seed(1) # set seed for reproducibility
+sel <- sample(x = 5, size = 12, replace = T) # create selection - sample uses a randmo number generator
+ind_z1 <- ind_orig[sel, ]
+head(ind_z1,3 )
+```
+
+```
+##     id age sex income
+## 2    2  54   m   2474
+## 2.1  2  54   m   2474
+## 3    3  35   m   2231
+```
+
+Changing the seed in the code above changes the individuals that are selected (try it).
+
+### IPF
+
+IPF is the most widely used and mature *deterministic* method to allocate individuals to zones (p.43).
+
+> IPF invoves calculating a series of non-integer weights that represent how representative each individual is of each zone. This is reweighting. 
+
+Three steps:
+
+1. generate a weight matrix containing fractional numbers
+2. integerisation - number of times each individual needs to be replicated (grossing up?)
+3. expansion - calculation of the final dataset
+
+#### Create a matrix to hold weights
 
 First, we create a matrix and initially populate with 1s. The weights matrix links the individual data to he aggregate level. Therefore every individual in this table is currently equally representative of every zone.
 
@@ -304,6 +349,76 @@ weights
 ```
 
 During the IPF procedure, the weights in this matrix are iteratively updated until they converge towards a single result.
+
+#### IPFinR
+
+IPFinR begins with a couple of nested loops, one to iterate through each zone (1:n_zone) and one to iterate through each category within the contraints (0-49 and 50+ in the first constraint, age).
+
+
+```r
+# create intuitive names for totals
+n_zone <- nrow(cons) # number of zones
+n_ind <- nrow(ind) # number of individuals
+n_age <- ncol(con_age) #  number of categories of "age"
+n_sex <- ncol(con_sex) # number of categories of "sex"
+
+# create initial matrix of categorical counts from ind
+# rows are zones and columns different categories of the variables
+ind_agg0 <- t(apply(cons, 1, function(x) 1 *ind_agg))
+colnames(ind_agg0) <- names(cons)
+# duplicate the weight matrix to keep in memory each step
+weights1 <- weights2 <- weights # create additional weight objects - all still populated with 1s at this stage
+
+# Assign values to the previously created weight matrix
+# to adapt to age constraint
+for (j in 1:n_zone){
+  for (i in 1:n_age){
+    index <- ind_cat[, i] == 1
+    weights1[index, j] <- weights[index, j] * con_age[j,i] / ind_agg0[j,i]
+  }
+  print(weights1)
+}
+```
+
+```
+##          [,1] [,2] [,3]
+## [1,] 1.333333    1    1
+## [2,] 1.333333    1    1
+## [3,] 4.000000    1    1
+## [4,] 1.333333    1    1
+## [5,] 4.000000    1    1
+##          [,1]     [,2] [,3]
+## [1,] 1.333333 2.666667    1
+## [2,] 1.333333 2.666667    1
+## [3,] 4.000000 1.000000    1
+## [4,] 1.333333 2.666667    1
+## [5,] 4.000000 1.000000    1
+##          [,1]     [,2]     [,3]
+## [1,] 1.333333 2.666667 1.333333
+## [2,] 1.333333 2.666667 1.333333
+## [3,] 4.000000 1.000000 3.500000
+## [4,] 1.333333 2.666667 1.333333
+## [5,] 4.000000 1.000000 3.500000
+```
+
+To see weights that have been allocated to individuals to populate zone 2 we query the second column, giving the result:
+
+2.6666667, 2.6666667, 1, 2.6666667, 1
+
+To see the weight allocated to individual 3 for each zone we query the third row of the weight matrix:
+
+4, 1, 3.5
+
+Note: we ask R to write the result after each completing each zone. The algorithm proceeds zone by zone with each column of the matrix corresponding to a zone.
+Note also that weights generated are fractional.
+
+The next step is to re-aggregate the results from individual level after reweighting.
+The weights of zone 1 (1st column of `weights1`) is multiplied by the characteristics of each individual (held in `ind_cat`). The result is a vector - the values corresponding to the number of people in each category for zone 1. To aggregate all individuals for zone 1, we sum the values in each category.
+
+The following loop re-aggregates the individual level data with the new weights for each zone:
+
+
+
 
 # Plots
 

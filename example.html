@@ -125,7 +125,7 @@ $(document).ready(function () {
 
 <div id="about" class="section level1">
 <h1><span class="header-section-number">1</span> About</h1>
-<p>This document was created to record the code and output of the example spatial microsimulation in Robin Lovelace’s book Spatial microsimulation with R <a href="http://robinlovelace.net/spatial-microsim-book/" class="uri">http://robinlovelace.net/spatial-microsim-book/</a>.</p>
+<p>This document was created to record the code and output of the example spatial microsimulation in Robin Lovelace’s book Spatial microsimulation with R <a href="http://robinlovelace.net/spatial-microsim-book/" class="uri">http://robinlovelace.net/spatial-microsim-book/</a>. The text quotes heavily from the book and care should be taken when using any of the text to correctly cite the source.</p>
 <p>This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <a href="http://rmarkdown.rstudio.com" class="uri">http://rmarkdown.rstudio.com</a>.</p>
 </div>
 <div id="introduction" class="section level1">
@@ -276,8 +276,43 @@ cat_sex &lt;- model.matrix(~ ind$sex - 1)[, c(2, 1)] # square brackets changes c
 <p>How representative each individual is of each zone is represented by their <em>weight</em> for that zone. The number of weights is therefore equal to the number of zones multiplied by the number of individuals in the microdata.</p>
 </blockquote>
 <p>We have 3 rows and 5 individuals in the SimpleWorld data, therefore 15 weights will be estmiated in this example.</p>
-<div id="create-a-matrix-to-hold-weights" class="section level3">
-<h3><span class="header-section-number">3.3.1</span> Create a matrix to hold weights</h3>
+<p><strong>note: creating matrix to hold weights appears here in book (printed pdf) but logically comes later - see weighting algorithmsbelow</strong></p>
+</div>
+<div id="weighting-algorithms" class="section level2">
+<h2><span class="header-section-number">3.4</span> Weighting algorithms</h2>
+<p>There are <em>deterministic</em> and <em>stochastic</em> methods for weighting in spatial microsimulation. IPF is <em>deterministic</em> and therefore the results never vary: the weights will be the same every time. In contrast, <em>stochastic</em> methods use random numbers.</p>
+<p>The distinction between <em>deterministic</em> and <em>stochastic</em> approaches points to a wider divide in methods: <em>reweighting</em> and <em>combinatorial optimisation</em>.</p>
+<blockquote>
+<p>The conecpt of weights is critical to understanding how population synthesis generates spatial microdata.</p>
+</blockquote>
+<div id="random-allocation" class="section level3">
+<h3><span class="header-section-number">3.4.1</span> Random allocation</h3>
+<p>If we have no information on the characteristics of the inhabitants, only total population of each zone then we can only assume that the distribution of characteristics found in the sample is representative of the distribution of the whole population. In this scenario, individuals are chosen at random from the sample and allocated to zones at random. Here, the distribution of characteristics of individuals in each zone will tend towards the microdata (see Lovelace, p.41).</p>
+<p>In SimpleWorld this can be achieved by randomly allocating the 5 individuals of the microdata to zone 1 (with population of 12) using the <code>sample()</code> command:</p>
+<pre class="r"><code>set.seed(1) # set seed for reproducibility
+sel &lt;- sample(x = 5, size = 12, replace = T) # create selection - sample uses a randmo number generator
+ind_z1 &lt;- ind_orig[sel, ]
+head(ind_z1,3 )</code></pre>
+<pre><code>##     id age sex income
+## 2    2  54   m   2474
+## 2.1  2  54   m   2474
+## 3    3  35   m   2231</code></pre>
+<p>Changing the seed in the code above changes the individuals that are selected (try it).</p>
+</div>
+<div id="ipf" class="section level3">
+<h3><span class="header-section-number">3.4.2</span> IPF</h3>
+<p>IPF is the most widely used and mature <em>deterministic</em> method to allocate individuals to zones (p.43).</p>
+<blockquote>
+<p>IPF invoves calculating a series of non-integer weights that represent how representative each individual is of each zone. This is reweighting.</p>
+</blockquote>
+<p>Three steps:</p>
+<ol style="list-style-type: decimal">
+<li>generate a weight matrix containing fractional numbers</li>
+<li>integerisation - number of times each individual needs to be replicated (grossing up?)</li>
+<li>expansion - calculation of the final dataset</li>
+</ol>
+<div id="create-a-matrix-to-hold-weights" class="section level4">
+<h4><span class="header-section-number">3.4.2.1</span> Create a matrix to hold weights</h4>
 <p>First, we create a matrix and initially populate with 1s. The weights matrix links the individual data to he aggregate level. Therefore every individual in this table is currently equally representative of every zone.</p>
 <p>A value of zero in cell <code>[i,j]</code> indicates that an individual <code>i</code> is not representative of a zone <code>j</code>.</p>
 <pre class="r"><code>weights &lt;- matrix(data = 1, nrow = nrow(ind), ncol = nrow(cons)) # create matrix for weights - set values as 1
@@ -291,6 +326,58 @@ cat_sex &lt;- model.matrix(~ ind$sex - 1)[, c(2, 1)] # square brackets changes c
 ## [4,]    1    1    1
 ## [5,]    1    1    1</code></pre>
 <p>During the IPF procedure, the weights in this matrix are iteratively updated until they converge towards a single result.</p>
+</div>
+<div id="ipfinr" class="section level4">
+<h4><span class="header-section-number">3.4.2.2</span> IPFinR</h4>
+<p>IPFinR begins with a couple of nested loops, one to iterate through each zone (1:n_zone) and one to iterate through each category within the contraints (0-49 and 50+ in the first constraint, age).</p>
+<pre class="r"><code># create intuitive names for totals
+n_zone &lt;- nrow(cons) # number of zones
+n_ind &lt;- nrow(ind) # number of individuals
+n_age &lt;- ncol(con_age) #  number of categories of &quot;age&quot;
+n_sex &lt;- ncol(con_sex) # number of categories of &quot;sex&quot;
+
+# create initial matrix of categorical counts from ind
+# rows are zones and columns different categories of the variables
+ind_agg0 &lt;- t(apply(cons, 1, function(x) 1 *ind_agg))
+colnames(ind_agg0) &lt;- names(cons)
+# duplicate the weight matrix to keep in memory each step
+weights1 &lt;- weights2 &lt;- weights # create additional weight objects - all still populated with 1s at this stage
+
+# Assign values to the previously created weight matrix
+# to adapt to age constraint
+for (j in 1:n_zone){
+  for (i in 1:n_age){
+    index &lt;- ind_cat[, i] == 1
+    weights1[index, j] &lt;- weights[index, j] * con_age[j,i] / ind_agg0[j,i]
+  }
+  print(weights1)
+}</code></pre>
+<pre><code>##          [,1] [,2] [,3]
+## [1,] 1.333333    1    1
+## [2,] 1.333333    1    1
+## [3,] 4.000000    1    1
+## [4,] 1.333333    1    1
+## [5,] 4.000000    1    1
+##          [,1]     [,2] [,3]
+## [1,] 1.333333 2.666667    1
+## [2,] 1.333333 2.666667    1
+## [3,] 4.000000 1.000000    1
+## [4,] 1.333333 2.666667    1
+## [5,] 4.000000 1.000000    1
+##          [,1]     [,2]     [,3]
+## [1,] 1.333333 2.666667 1.333333
+## [2,] 1.333333 2.666667 1.333333
+## [3,] 4.000000 1.000000 3.500000
+## [4,] 1.333333 2.666667 1.333333
+## [5,] 4.000000 1.000000 3.500000</code></pre>
+<p>To see weights that have been allocated to individuals to populate zone 2 we query the second column, giving the result:</p>
+<p>2.6666667, 2.6666667, 1, 2.6666667, 1</p>
+<p>To see the weight allocated to individual 3 for each zone we query the third row of the weight matrix:</p>
+<p>4, 1, 3.5</p>
+<p>Note: we ask R to write the result after each completing each zone. The algorithm proceeds zone by zone with each column of the matrix corresponding to a zone. Note also that weights generated are fractional.</p>
+<p>The next step is to re-aggregate the results from individual level after reweighting. The weights of zone 1 (1st column of <code>weights1</code>) is multiplied by the characteristics of each individual (held in <code>ind_cat</code>). The result is a vector - the values corresponding to the number of people in each category for zone 1. To aggregate all individuals for zone 1, we sum the values in each category.</p>
+<p>The following loop re-aggregates the individual level data with the new weights for each zone:</p>
+</div>
 </div>
 </div>
 </div>
