@@ -173,8 +173,11 @@ class(con_age)</code></pre>
 ## 1 6 6
 ## 2 4 6
 ## 3 3 8</code></pre>
+</div>
+<div id="check-and-re-format-data" class="section level2">
+<h2><span class="header-section-number">3.2</span> Check and re-format data</h2>
 <div id="tests-for-constraint-variables" class="section level3">
-<h3><span class="header-section-number">3.1.1</span>  Tests for constraint variables</h3>
+<h3><span class="header-section-number">3.2.1</span>  Tests for constraint variables</h3>
 <p>Beware of constraint variables that come from different sources (Lovelace): * check coherence of data * in some cases the total number of individuals will be inconsistent * can happen if constraint variables are measured using different base populations or at different levels (i.e indivdual and household) This can cause the procedure to fail.</p>
 <p>So, test constraints . . .</p>
 <ol style="list-style-type: decimal">
@@ -188,7 +191,7 @@ class(con_age)</code></pre>
 <pre><code>## [1] TRUE TRUE TRUE</code></pre>
 </div>
 <div id="subset-and-filter" class="section level3">
-<h3><span class="header-section-number">3.1.2</span> Subset and filter</h3>
+<h3><span class="header-section-number">3.2.2</span> Subset and filter</h3>
 <p>Good practice to filter out all unwanted data early on (i.e. remove superfluous variables). This will speed-up simulation and avoid over-complication.</p>
 <p>In the ind dataset, only age and sex variables are useful so we remove income:</p>
 <pre class="r"><code>ind_orig &lt;- ind # keep original dataset
@@ -200,6 +203,94 @@ ind</code></pre>
 ## 3  3  35   m
 ## 4  4  73   f
 ## 5  5  49   f</code></pre>
+</div>
+<div id="recategorise-individual-level-variables" class="section level3">
+<h3><span class="header-section-number">3.2.3</span> Recategorise individual level variables</h3>
+<p>Ensure each dataset contains the same information.</p>
+<p>In this example we need to categorise age in the ind dataset to match the constraint data (con_age).</p>
+<pre class="r"><code># categorise (bin) the age variable
+brks &lt;- c(0,49,120) # set break points
+labs &lt;- c(&quot;a0_49&quot;, &quot;a50+&quot;) # create labels
+ind$age &lt;- cut(ind$age, breaks = brks, labels = labs) # overwrite the age variable with categorical age bands
+ind</code></pre>
+<pre><code>##   id   age sex
+## 1  1  a50+   m
+## 2  2  a50+   m
+## 3  3 a0_49   m
+## 4  4  a50+   f
+## 5  5 a0_49   f</code></pre>
+</div>
+<div id="match-individual-and-aggregate-level-data-names" class="section level3">
+<h3><span class="header-section-number">3.2.4</span> Match individual and aggregate level data names</h3>
+<pre class="r"><code>levels(ind$age) # what are the levels in individual age variable?</code></pre>
+<pre><code>## [1] &quot;a0_49&quot; &quot;a50+&quot;</code></pre>
+<pre class="r"><code>names(con_age) # what are the column names (= age levels) in the aggregate age constraint variable</code></pre>
+<pre><code>## [1] &quot;a0.49&quot; &quot;a.50.&quot;</code></pre>
+<pre class="r"><code>names(con_age) &lt;- levels(ind$age) # rename aggregate age constraint variables</code></pre>
+</div>
+<div id="create-constraint-object" class="section level3">
+<h3><span class="header-section-number">3.2.5</span> Create constraint object</h3>
+<p>Now all constraint variable names match the individual data we combine them into a single object.</p>
+<pre class="r"><code>cons &lt;- cbind(con_age, con_sex) # column bind, cols are constraints - rows are zones
+
+cons[1:2, ] # display constraints for first two zones (rows)</code></pre>
+<pre><code>##   a0_49 a50+ m f
+## 1     8    4 6 6
+## 2     2    8 4 6</code></pre>
+<p>We now have two objects for the individual and aggregate datasets:</p>
+<ul>
+<li>Individual - with dimensions (5, 3) - 5 individuals, 3 variables</li>
+<li>Constraints - with dimensions (3, 4) - 3 zones, 4 variables (2 variables with 2categories each)</li>
+</ul>
+</div>
+<div id="make-individual-and-constraint-objects-comparable" class="section level3">
+<h3><span class="header-section-number">3.2.6</span> Make individual and constraint objects comparable</h3>
+<p>In order to compare the two datasets we must ‘flatten’ the individual level data - increasing the width so each column becomes one category name (and thus matching format of constraints data).</p>
+<p><strong>Note: great care should be taken to format columns in the same order as aggregate (constraints) data</strong> - unexpected results may occur where there are errors here. Be warned!</p>
+<pre class="r"><code>cat_age &lt;- model.matrix(~ ind$age - 1)
+cat_sex &lt;- model.matrix(~ ind$sex - 1)[, c(2, 1)] # square brackets changes column order (to match constraints dataset)
+
+(ind_cat &lt;-  cbind(cat_age, cat_sex)) # combine into single data frame - brackets used to print result</code></pre>
+<pre><code>##   ind$agea0_49 ind$agea50+ ind$sexm ind$sexf
+## 1            0           1        1        0
+## 2            0           1        1        0
+## 3            1           0        1        0
+## 4            0           1        0        1
+## 5            1           0        0        1</code></pre>
+<pre class="r"><code>(colSums(ind_cat)) # view the aggregated version of ind (and print)</code></pre>
+<pre><code>## ind$agea0_49  ind$agea50+     ind$sexm     ind$sexf 
+##            2            3            3            2</code></pre>
+<pre class="r"><code>ind_agg &lt;- colSums(ind_cat) # save result
+
+# test compatability of ind_agg and cons 
+(rbind(cons[1,], ind_agg)) # by binding into single data frame (uses only first row of cons)</code></pre>
+<pre><code>##   a0_49 a50+ m f
+## 1     8    4 6 6
+## 2     2    3 3 2</code></pre>
+</div>
+</div>
+<div id="population-synthesis" class="section level2">
+<h2><span class="header-section-number">3.3</span> Population synthesis</h2>
+<p>Now that we have the data loaded and prepared this part is concerned with running a spatial microsimulation model using iterative proportional fitting (IPF). IPF is used to allocate individuals to zones.</p>
+<blockquote>
+<p>How representative each individual is of each zone is represented by their <em>weight</em> for that zone. The number of weights is therefore equal to the number of zones multiplied by the number of individuals in the microdata.</p>
+</blockquote>
+<p>We have 3 rows and 5 individuals in the SimpleWorld data, therefore 15 weights will be estmiated in this example.</p>
+<div id="create-a-matrix-to-hold-weights" class="section level3">
+<h3><span class="header-section-number">3.3.1</span> Create a matrix to hold weights</h3>
+<p>First, we create a matrix and initially populate with 1s. The weights matrix links the individual data to he aggregate level. Therefore every individual in this table is currently equally representative of every zone.</p>
+<p>A value of zero in cell <code>[i,j]</code> indicates that an individual <code>i</code> is not representative of a zone <code>j</code>.</p>
+<pre class="r"><code>weights &lt;- matrix(data = 1, nrow = nrow(ind), ncol = nrow(cons)) # create matrix for weights - set values as 1
+(dim(weights))</code></pre>
+<pre><code>## [1] 5 3</code></pre>
+<pre class="r"><code>weights</code></pre>
+<pre><code>##      [,1] [,2] [,3]
+## [1,]    1    1    1
+## [2,]    1    1    1
+## [3,]    1    1    1
+## [4,]    1    1    1
+## [5,]    1    1    1</code></pre>
+<p>During the IPF procedure, the weights in this matrix are iteratively updated until they converge towards a single result.</p>
 </div>
 </div>
 </div>

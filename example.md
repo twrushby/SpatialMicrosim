@@ -94,6 +94,8 @@ con_sex
 ## 3 3 8
 ```
 
+## Check and re-format data
+
 ### Tests for constraint variables
 
 Beware of constraint variables that come from different sources (Lovelace):
@@ -150,7 +152,158 @@ ind
 ## 5  5  49   f
 ```
 
+### Recategorise individual level variables
 
+Ensure each dataset contains the same information.
+
+In this example we need to categorise age in the ind dataset to match the constraint data (con_age).
+
+
+```r
+# categorise (bin) the age variable
+brks <- c(0,49,120) # set break points
+labs <- c("a0_49", "a50+") # create labels
+ind$age <- cut(ind$age, breaks = brks, labels = labs) # overwrite the age variable with categorical age bands
+ind
+```
+
+```
+##   id   age sex
+## 1  1  a50+   m
+## 2  2  a50+   m
+## 3  3 a0_49   m
+## 4  4  a50+   f
+## 5  5 a0_49   f
+```
+
+### Match individual and aggregate level data names
+
+
+```r
+levels(ind$age) # what are the levels in individual age variable?
+```
+
+```
+## [1] "a0_49" "a50+"
+```
+
+```r
+names(con_age) # what are the column names (= age levels) in the aggregate age constraint variable
+```
+
+```
+## [1] "a0.49" "a.50."
+```
+
+```r
+names(con_age) <- levels(ind$age) # rename aggregate age constraint variables
+```
+
+### Create constraint object
+
+Now all constraint variable names match the individual data we combine them into a single object.
+
+
+```r
+cons <- cbind(con_age, con_sex) # column bind, cols are constraints - rows are zones
+
+cons[1:2, ] # display constraints for first two zones (rows)
+```
+
+```
+##   a0_49 a50+ m f
+## 1     8    4 6 6
+## 2     2    8 4 6
+```
+We now have two objects for the individual and aggregate datasets:
+
+* Individual - with dimensions (5, 3) - 5 individuals, 3 variables
+* Constraints - with dimensions (3, 4) - 3 zones, 4 variables (2 variables with 2categories each)
+
+### Make individual and constraint objects comparable
+
+In order to compare the two datasets we must 'flatten' the individual level data - increasing the width so each column becomes one category name (and thus matching format of constraints data).
+
+**Note: great care should be taken to format columns in the same order as aggregate (constraints) data** - unexpected results may occur where there are errors here. Be warned!
+
+
+```r
+cat_age <- model.matrix(~ ind$age - 1)
+cat_sex <- model.matrix(~ ind$sex - 1)[, c(2, 1)] # square brackets changes column order (to match constraints dataset)
+
+(ind_cat <-  cbind(cat_age, cat_sex)) # combine into single data frame - brackets used to print result
+```
+
+```
+##   ind$agea0_49 ind$agea50+ ind$sexm ind$sexf
+## 1            0           1        1        0
+## 2            0           1        1        0
+## 3            1           0        1        0
+## 4            0           1        0        1
+## 5            1           0        0        1
+```
+
+```r
+(colSums(ind_cat)) # view the aggregated version of ind (and print)
+```
+
+```
+## ind$agea0_49  ind$agea50+     ind$sexm     ind$sexf 
+##            2            3            3            2
+```
+
+```r
+ind_agg <- colSums(ind_cat) # save result
+
+# test compatability of ind_agg and cons 
+(rbind(cons[1,], ind_agg)) # by binding into single data frame (uses only first row of cons)
+```
+
+```
+##   a0_49 a50+ m f
+## 1     8    4 6 6
+## 2     2    3 3 2
+```
+
+## Population synthesis
+
+Now that we have the data loaded and prepared this part is concerned with running a spatial microsimulation model using iterative proportional fitting (IPF). IPF is used to allocate individuals to zones.
+
+> How representative each individual is of each zone is represented by their *weight* for that zone.
+> The number of weights is therefore equal to the number of zones multiplied by the number of individuals in the microdata.
+
+We have 3 rows and 5 individuals in the SimpleWorld data, therefore 15 weights will be estmiated in this example.
+
+### Create a matrix to hold weights
+
+First, we create a matrix and initially populate with 1s. The weights matrix links the individual data to he aggregate level. Therefore every individual in this table is currently equally representative of every zone.
+
+A value of zero in cell `[i,j]` indicates that an individual `i` is not representative of a zone `j`.
+
+
+```r
+weights <- matrix(data = 1, nrow = nrow(ind), ncol = nrow(cons)) # create matrix for weights - set values as 1
+(dim(weights))
+```
+
+```
+## [1] 5 3
+```
+
+```r
+weights
+```
+
+```
+##      [,1] [,2] [,3]
+## [1,]    1    1    1
+## [2,]    1    1    1
+## [3,]    1    1    1
+## [4,]    1    1    1
+## [5,]    1    1    1
+```
+
+During the IPF procedure, the weights in this matrix are iteratively updated until they converge towards a single result.
 
 # Plots
 
