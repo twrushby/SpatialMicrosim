@@ -418,6 +418,165 @@ The weights of zone 1 (1st column of `weights1`) is multiplied by the characteri
 The following loop re-aggregates the individual level data with the new weights for each zone:
 
 
+```r
+ind_agg2 <- ind_agg1 <- ind_agg0 * NA # create additional ind_agg objects
+
+# assign values to the aggregated data after constraint 1 - age
+for(i in 1:n_zone){
+  ind_agg1[i,] <- colSums(ind_cat * weights1[,i])
+}
+
+print(ind_agg1)
+```
+
+```
+##      a0_49 a50+        m        f
+## [1,]     8    4 6.666667 5.333333
+## [2,]     2    8 6.333333 3.666667
+## [3,]     7    4 6.166667 4.833333
+```
+
+#### Preliminary checks to ensure code is working correctly.
+
+1. Are the resulting populations for each zone correct?
+
+
+```r
+# Check populations for first constraint variable - age (columns 1:2)
+rowSums(ind_agg1[,1:2]) # simulated populations in each zone - age constraint only
+```
+
+```
+## [1] 12 10 11
+```
+
+```r
+rowSums(cons[,1:2]) # the observed populations in each zone
+```
+
+```
+## [1] 12 10 11
+```
+
+```r
+# Check populations for second constraint - sex (columns 3:4)
+rowSums(ind_agg1[,3:4]) # simulated populations in each zone - sex constraint
+```
+
+```
+## [1] 12 10 11
+```
+
+```r
+rowSums(cons[,3:4]) # the observed populations in each zone
+```
+
+```
+## [1] 12 10 11
+```
+2. What is the fit between observed and simulated results after constraining by age?
+
+We calculate the correlation between aggregate actual data and the constraints. Produces a value between -1 and 1.
+A value (in this example) of 1 will be perfect correlation.
+
+
+```r
+# test fit using cor function
+# a 1d representation of the aggregate level data
+
+vec <- function(x) as.numeric(as.matrix(x))
+cor(vec(ind_agg0), vec(cons)) # before reweighting (ind_agg0)
+```
+
+```
+## [1] -0.3368608
+```
+
+```r
+cor(vec(ind_agg1), vec(cons)) # after reweighting using age constraint (ind_agg1)
+```
+
+```
+## [1] 0.628434
+```
+We can see from the results above that the new weights lead to a much better fit.
+
+#### Add second constraint variable
+
+
+```r
+for(j in 1:n_zone){
+  for(i in 1:n_sex + n_age){
+    index <- ind_cat[,i] == 1
+    weights2[index,j] <- weights1[index,j] * cons[j,i] / ind_agg1[j,i]
+  }
+  print(weights2)
+}
+```
+
+```
+##      [,1] [,2] [,3]
+## [1,]  1.2    1    1
+## [2,]  1.2    1    1
+## [3,]  3.6    1    1
+## [4,]  1.5    1    1
+## [5,]  4.5    1    1
+##      [,1]      [,2] [,3]
+## [1,]  1.2 1.6842105    1
+## [2,]  1.2 1.6842105    1
+## [3,]  3.6 0.6315789    1
+## [4,]  1.5 4.3636364    1
+## [5,]  4.5 1.6363636    1
+##      [,1]      [,2]      [,3]
+## [1,]  1.2 1.6842105 0.6486486
+## [2,]  1.2 1.6842105 0.6486486
+## [3,]  3.6 0.6315789 1.7027027
+## [4,]  1.5 4.3636364 2.2068966
+## [5,]  4.5 1.6363636 5.7931034
+```
+
+```r
+# re-aggregate the individual level data with the new weights for each zone
+# assign values to the aggregated data after constraint 2 - sex
+for(i in 1:n_zone){
+  ind_agg2[i,] <- colSums(ind_cat * weights2[,i])
+}
+
+print(ind_agg2)
+```
+
+```
+##         a0_49     a50+ m f
+## [1,] 8.100000 3.900000 6 6
+## [2,] 2.267943 7.732057 4 6
+## [3,] 7.495806 3.504194 3 8
+```
+
+```r
+# as before, test fit using cor function
+
+cor(vec(ind_agg0), vec(cons)) # before reweighting (ind_agg0)
+```
+
+```
+## [1] -0.3368608
+```
+
+```r
+cor(vec(ind_agg1), vec(cons)) # after reweighting using age constraint (ind_agg1) - first iteration
+```
+
+```
+## [1] 0.628434
+```
+
+```r
+cor(vec(ind_agg2), vec(cons)) # after reweighting using sex constraint (ind_agg2) - first iteration
+```
+
+```
+## [1] 0.9931992
+```
 
 
 # Plots
