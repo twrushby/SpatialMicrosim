@@ -140,11 +140,12 @@ In order to compare the two datasets we must 'flatten' the individual level data
 **Note: great care should be taken to format columns in the same order as aggregate (constraints) data** - unexpected results may occur where there are errors here. Be warned!
 
 ```{r flatten_ind_data}
-
+# take each variable in turn and create a new matrix for each
+# model.matrix expands factors of each variable, creating a column for each dummy variable (see help for more)
 cat_age <- model.matrix(~ ind$age - 1)
 cat_sex <- model.matrix(~ ind$sex - 1)[, c(2, 1)] # square brackets changes column order (to match constraints dataset)
 
-(ind_cat <-  cbind(cat_age, cat_sex)) # combine into single data frame - brackets used to print result
+(ind_cat <-  cbind(cat_age, cat_sex)) # combine matrices into single data frame - brackets used to print result
 
 (colSums(ind_cat)) # view the aggregated version of ind (and print)
 ind_agg <- colSums(ind_cat) # save result

@@ -228,10 +228,12 @@ In order to compare the two datasets we must 'flatten' the individual level data
 
 
 ```r
+# take each variable in turn and create a new matrix for each
+# model.matrix expands factors of each variable, creating a column for each dummy variable (see help for more)
 cat_age <- model.matrix(~ ind$age - 1)
 cat_sex <- model.matrix(~ ind$sex - 1)[, c(2, 1)] # square brackets changes column order (to match constraints dataset)
 
-(ind_cat <-  cbind(cat_age, cat_sex)) # combine into single data frame - brackets used to print result
+(ind_cat <-  cbind(cat_age, cat_sex)) # combine matrices into single data frame - brackets used to print result
 ```
 
 ```

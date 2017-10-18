@@ -247,10 +247,12 @@ cons[1:2, ] # display constraints for first two zones (rows)</code></pre>
 <h3><span class="header-section-number">3.2.6</span> Make individual and constraint objects comparable</h3>
 <p>In order to compare the two datasets we must ‘flatten’ the individual level data - increasing the width so each column becomes one category name (and thus matching format of constraints data).</p>
 <p><strong>Note: great care should be taken to format columns in the same order as aggregate (constraints) data</strong> - unexpected results may occur where there are errors here. Be warned!</p>
-<pre class="r"><code>cat_age &lt;- model.matrix(~ ind$age - 1)
+<pre class="r"><code># take each variable in turn and create a new matrix for each
+# model.matrix expands factors of each variable, creating a column for each dummy variable (see help for more)
+cat_age &lt;- model.matrix(~ ind$age - 1)
 cat_sex &lt;- model.matrix(~ ind$sex - 1)[, c(2, 1)] # square brackets changes column order (to match constraints dataset)
 
-(ind_cat &lt;-  cbind(cat_age, cat_sex)) # combine into single data frame - brackets used to print result</code></pre>
+(ind_cat &lt;-  cbind(cat_age, cat_sex)) # combine matrices into single data frame - brackets used to print result</code></pre>
 <pre><code>##   ind$agea0_49 ind$agea50+ ind$sexm ind$sexf
 ## 1            0           1        1        0
 ## 2            0           1        1        0
