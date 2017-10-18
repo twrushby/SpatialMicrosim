@@ -1,7 +1,7 @@
 ---
 title: "Spatial Microsim example"
-author: "Thomas W Rushby"
-date: "13/10/2017"
+author: "Tom Rushby (t.w.rushby@soton.ac.uk) `@tom_rushby`"
+date: 'Last run on: `r format(Sys.Date(), "%a %d %b %Y")`'
 output:
   html_document:
     fig_caption: yes
@@ -333,13 +333,59 @@ cor(vec(ind_agg2), vec(cons)) # after reweighting using sex constraint (ind_agg2
 
 ```
 
+### IPF with ipfp
 
-# Plots
+```{r ipfp_setup}
+# install.packages("ipfp")
+library(ipfp)
 
-You can also embed plots, for example:
+# convert input constraint dataset to numeric - ipfp requires numeric data
+cons <- apply(cons, 2, as.numeric) # to 1d numeric data type
 
-```{r plots, echo=FALSE}
+# run ipfp for one zone
+ipfp(cons[1,], t(ind_cat), x0 = rep(1, n_ind)) # runs ipf command
+
+# to avoid transposing ind_cat each time we call ipfp we create a new data frame
+ind_catt <- t(ind_cat) # save transposed version of ind_cat
+# create x0 to save creating object each time
+x0 <- rep(1, n_ind) # an initial vector of 1s - one for each individual - the starting point of the weight estimates in ipfp
+
+# simplified call for ipfp - 1 zone
+ipfp(cons[1,], ind_catt, x0, v = TRUE) # runs ipf command - v = TRUE gives feedback
+
+# loop to iterate through constraints, one zone (row) at a time
+weights_loop_1 <- weights # first create a copy of the weights object
+
+for(i in 1:ncol(weights)){
+  weights_loop_1[,i] <- ipfp(cons[i,],ind_catt, x0, maxit = 2)
+}
+
+print(weights_loop_1)
+
+# alternatively we can use apply to loop over zones
+weights_loop_2 <- weights # first create another copy of the weights object
+# apply ipfp over rows in cons (set MARGIN = 1)
+weights_loop_2 <- apply(cons, MARGIN = 1, FUN = 
+                           function(x) ipfp(x, ind_catt, x0, maxit = 20))
+
+print(weights_loop_2)
+```
+Don't forget to check the resulting weights obtained thru ipfp
+
+```{r}
+
+# Loop 1 aggregated individual weights - ipfp results, 2 iterations
+ind_agg_loop1 <- t(apply(weights_loop_1, 2, function(x) colSums(x * ind_cat)))
+colnames(ind_agg_loop1) <- colnames(cons)
+print(ind_agg_loop1)
+
+# Loop 2 aggregated individual weights - ipfp results, 20 iterations
+ind_agg_loop2 <- t(apply(weights_loop_2, 2, function(x) colSums(x * ind_cat)))
+colnames(ind_agg_loop2) <- colnames(cons)
+print(ind_agg_loop2)
+
+# Compare with constaints (aggregate) data
+print(cons)
 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

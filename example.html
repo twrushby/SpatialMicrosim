@@ -9,7 +9,7 @@
 <meta name="generator" content="pandoc" />
 
 
-<meta name="author" content="Thomas W Rushby" />
+<meta name="author" content="Tom Rushby (t.w.rushby@soton.ac.uk) @tom_rushby" />
 
 
 <title>Spatial Microsim example</title>
@@ -117,8 +117,8 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Spatial Microsim example</h1>
-<h4 class="author"><em>Thomas W Rushby</em></h4>
-<h4 class="date"><em>13/10/2017</em></h4>
+<h4 class="author"><em>Tom Rushby (<a href="mailto:t.w.rushby@soton.ac.uk">t.w.rushby@soton.ac.uk</a>) <code>@tom_rushby</code></em></h4>
+<h4 class="date"><em>Last run on: Wed 18 Oct 2017</em></h4>
 
 </div>
 
@@ -467,12 +467,83 @@ cor(vec(ind_agg0), vec(cons)) # before reweighting (ind_agg0)</code></pre>
 <pre><code>## [1] 0.9931992</code></pre>
 </div>
 </div>
+<div id="ipf-with-ipfp" class="section level3">
+<h3><span class="header-section-number">3.4.3</span> IPF with ipfp</h3>
+<pre class="r"><code># install.packages(&quot;ipfp&quot;)
+library(ipfp)
+
+# convert input constraint dataset to numeric - ipfp requires numeric data
+cons &lt;- apply(cons, 2, as.numeric) # to 1d numeric data type
+
+# run ipfp for one zone
+ipfp(cons[1,], t(ind_cat), x0 = rep(1, n_ind)) # runs ipf command</code></pre>
+<pre><code>## [1] 1.227998 1.227998 3.544004 1.544004 4.455996</code></pre>
+<pre class="r"><code># to avoid transposing ind_cat each time we call ipfp we create a new data frame
+ind_catt &lt;- t(ind_cat) # save transposed version of ind_cat
+# create x0 to save creating object each time
+x0 &lt;- rep(1, n_ind) # an initial vector of 1s - one for each individual - the starting point of the weight estimates in ipfp
+
+# simplified call for ipfp - 1 zone
+ipfp(cons[1,], ind_catt, x0, v = TRUE) # runs ipf command - v = TRUE gives feedback</code></pre>
+<pre><code>## iteration 0: 0.141421
+## iteration 1: 0.00367328
+## iteration 2: 9.54727e-05
+## iteration 3: 2.48149e-06
+## iteration 4: 6.44977e-08
+## iteration 5: 1.6764e-09</code></pre>
+<pre><code>## [1] 1.227998 1.227998 3.544004 1.544004 4.455996</code></pre>
+<pre class="r"><code># loop to iterate through constraints, one zone (row) at a time
+weights_loop_1 &lt;- weights # first create a copy of the weights object
+
+for(i in 1:ncol(weights)){
+  weights_loop_1[,i] &lt;- ipfp(cons[i,],ind_catt, x0, maxit = 2)
+}
+
+print(weights_loop_1)</code></pre>
+<pre><code>##          [,1]      [,2]      [,3]
+## [1,] 1.227273 1.7244202 0.7233239
+## [2,] 1.227273 1.7244202 0.7233239
+## [3,] 3.545455 0.5511596 1.5533522
+## [4,] 1.542857 4.5467626 2.5416839
+## [5,] 4.457143 1.4532374 5.4583161</code></pre>
+<pre class="r"><code># alternatively we can use apply to loop over zones
+weights_loop_2 &lt;- weights # first create another copy of the weights object
+# apply ipfp over rows in cons (set MARGIN = 1)
+weights_loop_2 &lt;- apply(cons, MARGIN = 1, FUN = 
+                           function(x) ipfp(x, ind_catt, x0, maxit = 20))
+
+print(weights_loop_2)</code></pre>
+<pre><code>##          [,1]      [,2]      [,3]
+## [1,] 1.227998 1.7250828 0.7250828
+## [2,] 1.227998 1.7250828 0.7250828
+## [3,] 3.544004 0.5498344 1.5498344
+## [4,] 1.544004 4.5498344 2.5498344
+## [5,] 4.455996 1.4501656 5.4501656</code></pre>
+<p>Don’t forget to check the resulting weights obtained thru ipfp</p>
+<pre class="r"><code># Loop 1 aggregated individual weights - ipfp results, 2 iterations
+ind_agg_loop1 &lt;- t(apply(weights_loop_1, 2, function(x) colSums(x * ind_cat)))
+colnames(ind_agg_loop1) &lt;- colnames(cons)
+print(ind_agg_loop1)</code></pre>
+<pre><code>##         a0_49     a50+ m f
+## [1,] 8.002597 3.997403 6 6
+## [2,] 2.004397 7.995603 4 6
+## [3,] 7.011668 3.988332 3 8</code></pre>
+<pre class="r"><code># Loop 2 aggregated individual weights - ipfp results, 20 iterations
+ind_agg_loop2 &lt;- t(apply(weights_loop_2, 2, function(x) colSums(x * ind_cat)))
+colnames(ind_agg_loop2) &lt;- colnames(cons)
+print(ind_agg_loop2)</code></pre>
+<pre><code>##      a0_49 a50+ m f
+## [1,]     8    4 6 6
+## [2,]     2    8 4 6
+## [3,]     7    4 3 8</code></pre>
+<pre class="r"><code># Compare with constaints (aggregate) data
+print(cons)</code></pre>
+<pre><code>##      a0_49 a50+ m f
+## [1,]     8    4 6 6
+## [2,]     2    8 4 6
+## [3,]     7    4 3 8</code></pre>
 </div>
 </div>
-<div id="plots" class="section level1">
-<h1><span class="header-section-number">4</span> Plots</h1>
-<p>You can also embed plots, for example:</p>
-<p>Note that the <code>echo = FALSE</code> parameter was added to the code chunk to prevent printing of the R code that generated the plot.</p>
 </div>
 
 

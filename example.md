@@ -1,6 +1,6 @@
 # Spatial Microsim example
-Thomas W Rushby  
-13/10/2017  
+Tom Rushby (t.w.rushby@soton.ac.uk) `@tom_rushby`  
+Last run on: `r format(Sys.Date(), "%a %d %b %Y")`  
 
 
 
@@ -578,11 +578,125 @@ cor(vec(ind_agg2), vec(cons)) # after reweighting using sex constraint (ind_agg2
 ## [1] 0.9931992
 ```
 
-
-# Plots
-
-You can also embed plots, for example:
+### IPF with ipfp
 
 
+```r
+# install.packages("ipfp")
+library(ipfp)
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# convert input constraint dataset to numeric - ipfp requires numeric data
+cons <- apply(cons, 2, as.numeric) # to 1d numeric data type
+
+# run ipfp for one zone
+ipfp(cons[1,], t(ind_cat), x0 = rep(1, n_ind)) # runs ipf command
+```
+
+```
+## [1] 1.227998 1.227998 3.544004 1.544004 4.455996
+```
+
+```r
+# to avoid transposing ind_cat each time we call ipfp we create a new data frame
+ind_catt <- t(ind_cat) # save transposed version of ind_cat
+# create x0 to save creating object each time
+x0 <- rep(1, n_ind) # an initial vector of 1s - one for each individual - the starting point of the weight estimates in ipfp
+
+# simplified call for ipfp - 1 zone
+ipfp(cons[1,], ind_catt, x0, v = TRUE) # runs ipf command - v = TRUE gives feedback
+```
+
+```
+## iteration 0:	0.141421
+## iteration 1:	0.00367328
+## iteration 2:	9.54727e-05
+## iteration 3:	2.48149e-06
+## iteration 4:	6.44977e-08
+## iteration 5:	1.6764e-09
+```
+
+```
+## [1] 1.227998 1.227998 3.544004 1.544004 4.455996
+```
+
+```r
+# loop to iterate through constraints, one zone (row) at a time
+weights_loop_1 <- weights # first create a copy of the weights object
+
+for(i in 1:ncol(weights)){
+  weights_loop_1[,i] <- ipfp(cons[i,],ind_catt, x0, maxit = 2)
+}
+
+print(weights_loop_1)
+```
+
+```
+##          [,1]      [,2]      [,3]
+## [1,] 1.227273 1.7244202 0.7233239
+## [2,] 1.227273 1.7244202 0.7233239
+## [3,] 3.545455 0.5511596 1.5533522
+## [4,] 1.542857 4.5467626 2.5416839
+## [5,] 4.457143 1.4532374 5.4583161
+```
+
+```r
+# alternatively we can use apply to loop over zones
+weights_loop_2 <- weights # first create another copy of the weights object
+# apply ipfp over rows in cons (set MARGIN = 1)
+weights_loop_2 <- apply(cons, MARGIN = 1, FUN = 
+                           function(x) ipfp(x, ind_catt, x0, maxit = 20))
+
+print(weights_loop_2)
+```
+
+```
+##          [,1]      [,2]      [,3]
+## [1,] 1.227998 1.7250828 0.7250828
+## [2,] 1.227998 1.7250828 0.7250828
+## [3,] 3.544004 0.5498344 1.5498344
+## [4,] 1.544004 4.5498344 2.5498344
+## [5,] 4.455996 1.4501656 5.4501656
+```
+Don't forget to check the resulting weights obtained thru ipfp
+
+
+```r
+# Loop 1 aggregated individual weights - ipfp results, 2 iterations
+ind_agg_loop1 <- t(apply(weights_loop_1, 2, function(x) colSums(x * ind_cat)))
+colnames(ind_agg_loop1) <- colnames(cons)
+print(ind_agg_loop1)
+```
+
+```
+##         a0_49     a50+ m f
+## [1,] 8.002597 3.997403 6 6
+## [2,] 2.004397 7.995603 4 6
+## [3,] 7.011668 3.988332 3 8
+```
+
+```r
+# Loop 2 aggregated individual weights - ipfp results, 20 iterations
+ind_agg_loop2 <- t(apply(weights_loop_2, 2, function(x) colSums(x * ind_cat)))
+colnames(ind_agg_loop2) <- colnames(cons)
+print(ind_agg_loop2)
+```
+
+```
+##      a0_49 a50+ m f
+## [1,]     8    4 6 6
+## [2,]     2    8 4 6
+## [3,]     7    4 3 8
+```
+
+```r
+# Compare with constaints (aggregate) data
+print(cons)
+```
+
+```
+##      a0_49 a50+ m f
+## [1,]     8    4 6 6
+## [2,]     2    8 4 6
+## [3,]     7    4 3 8
+```
+
